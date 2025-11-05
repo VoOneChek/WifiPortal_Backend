@@ -1,0 +1,6 @@
+@WifiPortal_HostAddress = http://localhost:5082
+
+GET {{WifiPortal_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
