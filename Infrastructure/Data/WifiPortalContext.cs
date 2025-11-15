@@ -14,10 +14,8 @@ namespace Infrastructure.Data
         : base(options) { }
 
         public DbSet<User> Users => Set<User>();
-        public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
         public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
         public DbSet<AuthMethod> AuthMethods => Set<AuthMethod>();
-        public DbSet<AuthLog> AuthLogs => Set<AuthLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
