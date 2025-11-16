@@ -11,10 +11,11 @@ namespace Application.Interfaces.IServices
 {
     public interface IOtpService
     {
-        Task<Result> CreateAsync(CreateOtpCodeDto createOtpDto);
-        Task<Result> VerifyOtpAsync(string phoneNumber, string code);
+        Task<Result> CreateAndSendSmsAsync(string phoneNumber);
+        Task<Result> CreateAndSendTelegramAsync(string phoneNumber);
+        Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code);
         Task<Result> ResendOtpAsync(string phoneNumber);
         Task<Result> InvalidateOtpAsync(string phoneNumber);
-        Task<Result<OtpStatusDto>> GetOtpStatusAsync(string phoneNumber);
+        Task<bool> HasActiveOtpAsync(string phoneNumber);
     }
 }

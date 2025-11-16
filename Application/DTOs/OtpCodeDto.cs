@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Application.DTOs.UserDto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,5 +23,11 @@ namespace Application.DTOs.OtpCodeDto
     {
         public required string PhoneNumber { get; set; }
         public required string Code { get; set; }
+    }
+
+    public class AuthResponseDto
+    {
+        public required string Token { get; set; }
+        public required ReadUserDto User { get; set; }
     }
 }

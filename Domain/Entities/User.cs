@@ -11,7 +11,8 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
         public string PhoneNumber { get; set; } = null!;
-        public string? SocialId { get; set; } // ID из VK, SMS, RADIUS
+        public string? SocialId { get; set; } // ID из VK
+        public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
 

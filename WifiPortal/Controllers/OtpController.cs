@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.OtpCodeDto;
 using Application.Interfaces.IServices;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
@@ -16,10 +17,17 @@ public class OtpController : ControllerBase
         _otps = otps;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create(CreateOtpCodeDto createOtpDto)
+    [HttpPost("sms")]
+    public async Task<IActionResult> CreateSms(CreateOtpCodeDto createOtpDto)
     {
-        var result = await _otps.CreateAsync(createOtpDto);
+        var result = await _otps.CreateAndSendSmsAsync(createOtpDto.PhoneNumber);
+        return result.Success ? Ok() : BadRequest(result.Error);
+    }
+
+    [HttpPost("telegram")]
+    public async Task<IActionResult> CreateTelegram(CreateOtpCodeDto createOtpDto)
+    {
+        var result = await _otps.CreateAndSendTelegramAsync(createOtpDto.PhoneNumber);
         return result.Success ? Ok() : BadRequest(result.Error);
     }
 
@@ -27,7 +35,7 @@ public class OtpController : ControllerBase
     public async Task<IActionResult> VerifyOtp(VerifyOtpRequestDto verifyOtpDto)
     {
         var result = await _otps.VerifyOtpAsync(verifyOtpDto.PhoneNumber, verifyOtpDto.Code);
-        return result.Success ? Ok() : BadRequest(result.Error);
+        return result.Success ? Ok(result.Data) : BadRequest(result.Error);
     }
 
     [HttpPost("{phoneNumber}/resend")]
@@ -42,12 +50,5 @@ public class OtpController : ControllerBase
     {
         var result = await _otps.InvalidateOtpAsync(phoneNumber);
         return result.Success ? Ok() : BadRequest(result.Error);
-    }
-
-    [HttpGet("{phoneNumber}/status")]
-    public async Task<IActionResult> GetOtpStatus(string phoneNumber)
-    {
-        var result = await _otps.GetOtpStatusAsync(phoneNumber);
-        return result.Success ? Ok(result.Data) : BadRequest(result.Error);
     }
 }

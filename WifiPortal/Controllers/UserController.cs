@@ -1,12 +1,14 @@
 ﻿using Application.DTOs.UserDto;
 using Application.Interfaces.IServices;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _users;
@@ -17,6 +19,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var result = await _users.GetAllAsync();
@@ -24,6 +27,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _users.GetByIdAsync(id);
@@ -31,6 +35,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("phone/{phone}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetByPhone(string phone)
     {
         var result = await _users.GetByPhoneAsync(phone);
@@ -38,6 +43,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("{id}/with-sessions")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserWithSessions(int id)
     {
         var result = await _users.GetUserWithSessionsAsync(id);

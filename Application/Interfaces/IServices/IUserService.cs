@@ -18,5 +18,6 @@ namespace Application.Interfaces.IServices
         Task<Result> UpdateAsync(int id, UpdateUserDto updateUserDto);
         Task<Result> DeleteAsync(int id);
         Task<Result<UserDetailDto>> GetUserWithSessionsAsync(int id);
+        Task<Result> LinkTelegramAsync(string phoneNumber, long chatId, string? username);
     }
 }

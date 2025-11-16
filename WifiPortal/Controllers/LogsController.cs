@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+//[Authorize(Roles = "Admin")]
 public class LogsController : ControllerBase
 {
     private readonly IWebHostEnvironment _environment;

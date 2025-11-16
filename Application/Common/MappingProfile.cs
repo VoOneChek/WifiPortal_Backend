@@ -17,6 +17,8 @@ namespace Application.Common.MappingProfile
         {
             CreateMap<AuthMethod, ReadAuthMethodDto>();
             CreateMap<AuthSession, ReadAuthSessionDto>();
+            CreateMap<User, ReadUserDto>();
+            CreateMap<CreateUserDto, User>();
         }
     }
 }
