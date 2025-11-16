@@ -1,12 +1,14 @@
 ﻿using Application.DTOs.AuthSessionDto;
 using Application.Interfaces.IServices;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class SessionController : ControllerBase
 {
     private readonly IAuthSessionService _sessions;
@@ -17,6 +19,7 @@ public class SessionController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var result = await _sessions.GetAllAsync();
@@ -24,6 +27,7 @@ public class SessionController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _sessions.GetByIdAsync(id);

@@ -199,5 +199,36 @@ namespace Application.Services
             _logger.LogInformation("Пользователь с ID {Id} и {SessionCount} сессиями успешно найден", id, dto.Sessions.Count);
             return Result<UserDetailDto>.Ok(dto);
         }
+
+        public async Task<Result> LinkTelegramAsync(string phoneNumber, long chatId, string? username)
+        {
+            _logger.LogInformation("Привязка Telegram для номера {PhoneNumber}", phoneNumber);
+
+            var user = await _users.GetByPhoneAsync(phoneNumber);
+            if (user == null)
+            {
+                _logger.LogWarning("Пользователь с номером {PhoneNumber} не найден", phoneNumber);
+                user = _mapper.Map<User>(new CreateUserDto { 
+                    PhoneNumber = phoneNumber,
+                    TelegramChatId = chatId,
+                    FullName = username
+                });
+                await _users.AddAsync(user);
+                await _users.SaveChangesAsync();
+
+                _logger.LogInformation("Telegram привязан для нового пользователя {UserFullName}", user.FullName);
+                return Result.Ok();
+            }
+
+            user.TelegramChatId = chatId;
+            if (user.FullName == string.Empty)
+                user.FullName = username;
+
+            _users.Update(user);
+            await _users.SaveChangesAsync();
+
+            _logger.LogInformation("Telegram привязан для пользователя {UserId}", user.Id);
+            return Result.Ok();
+        }
     }
 }

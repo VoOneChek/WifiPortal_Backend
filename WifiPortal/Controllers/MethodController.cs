@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.AuthMethodDto;
 using Application.Interfaces.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
@@ -30,6 +31,7 @@ public class MethodController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateAuthMethodDto createMethodDto)
     {
         var result = await _methods.CreateAsync(createMethodDto);
@@ -37,6 +39,7 @@ public class MethodController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, CreateAuthMethodDto updateMethodDto)
     {
         var result = await _methods.UpdateAsync(id, updateMethodDto);
@@ -44,6 +47,7 @@ public class MethodController : ControllerBase
     }
 
     [HttpPatch("{id}/toggle")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         var result = await _methods.ToggleStatusAsync(id);
