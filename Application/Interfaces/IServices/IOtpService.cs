@@ -11,10 +11,8 @@ namespace Application.Interfaces.IServices
 {
     public interface IOtpService
     {
-        Task<Result> CreateAndSendSmsAsync(string phoneNumber);
-        Task<Result> CreateAndSendTelegramAsync(string phoneNumber);
+        Task<Result<string>> CreateOtpCodeAsync(string phoneNumber);
         Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code);
-        Task<Result> ResendOtpAsync(string phoneNumber);
         Task<Result> InvalidateOtpAsync(string phoneNumber);
         Task<bool> HasActiveOtpAsync(string phoneNumber);
     }

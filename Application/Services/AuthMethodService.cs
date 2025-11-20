@@ -84,6 +84,13 @@ namespace Application.Services
                 return Result.Fail("Описание метода аутентификации обязательно");
             }
 
+            var existingMethod = await _methods.GetByNameAsync(createMethodDto.Name);
+            if (existingMethod != null)
+            {
+                _logger.LogWarning("Метод аутентификации с названием \"{Name}\" уже существует", createMethodDto.Name);
+                return Result.Fail("Метод аутентификации с таким названием уже существует");
+            }
+
             var method = _mapper.Map<AuthMethod>(createMethodDto);
             await _methods.AddAsync(method);
             await _methods.SaveChangesAsync();

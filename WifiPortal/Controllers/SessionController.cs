@@ -41,6 +41,13 @@ public class SessionController : ControllerBase
         return result.Success ? Ok() : BadRequest(result.Error);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var result = await _sessions.DeleteSessionAsync(id);
+        return result.Success ? Ok() : BadRequest(result.Error);
+    }
+
     [HttpPatch("{id}/deactivate")]
     public async Task<IActionResult> Deactivate(int id)
     {
@@ -59,6 +66,13 @@ public class SessionController : ControllerBase
     public async Task<IActionResult> GetActiveSessionsByUserId(int userId)
     {
         var result = await _sessions.GetActiveSessionsByUserIdAsync(userId);
+        return result.Success ? Ok(result.Data) : BadRequest(result.Error);
+    }
+
+    [HttpPatch("reactivate/{macAddress}")]
+    public async Task<IActionResult> ReactivateByMac(string macAddress)
+    {
+        var result = await _sessions.ReactivateSessionByMacAsync(macAddress);
         return result.Success ? Ok(result.Data) : BadRequest(result.Error);
     }
 }

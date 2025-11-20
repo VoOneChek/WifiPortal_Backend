@@ -17,32 +17,11 @@ public class OtpController : ControllerBase
         _otps = otps;
     }
 
-    [HttpPost("sms")]
-    public async Task<IActionResult> CreateSms(CreateOtpCodeDto createOtpDto)
-    {
-        var result = await _otps.CreateAndSendSmsAsync(createOtpDto.PhoneNumber);
-        return result.Success ? Ok() : BadRequest(result.Error);
-    }
-
-    [HttpPost("telegram")]
-    public async Task<IActionResult> CreateTelegram(CreateOtpCodeDto createOtpDto)
-    {
-        var result = await _otps.CreateAndSendTelegramAsync(createOtpDto.PhoneNumber);
-        return result.Success ? Ok() : BadRequest(result.Error);
-    }
-
     [HttpPost("verify")]
     public async Task<IActionResult> VerifyOtp(VerifyOtpRequestDto verifyOtpDto)
     {
         var result = await _otps.VerifyOtpAsync(verifyOtpDto.PhoneNumber, verifyOtpDto.Code);
         return result.Success ? Ok(result.Data) : BadRequest(result.Error);
-    }
-
-    [HttpPost("{phoneNumber}/resend")]
-    public async Task<IActionResult> ResendOtp(string phoneNumber)
-    {
-        var result = await _otps.ResendOtpAsync(phoneNumber);
-        return result.Success ? Ok() : BadRequest(result.Error);
     }
 
     [HttpDelete("{phoneNumber}")]

@@ -84,11 +84,37 @@ namespace Application.Services
                 return Result.Fail("MAC-адрес обязателен");
             }
 
+            var macExists = await _sessions.IsMacAddressExistsAsync(createSessionDto.MacAddress);
+            if (macExists)
+            {
+                _logger.LogWarning("Сессия с MAC-адресом {MacAddress} уже существует",
+                    createSessionDto.MacAddress);
+                return Result.Fail("Сессия с таким MAC-адресом уже существует");
+            }
+
             var session = _mapper.Map<AuthSession>(createSessionDto);
             await _sessions.AddAsync(session);
             await _sessions.SaveChangesAsync();
 
             _logger.LogInformation("Сессия аутентификации для пользователя {UserId} успешно создана", createSessionDto.UserId);
+            return Result.Ok();
+        }
+
+        public async Task<Result> DeleteSessionAsync(int id)
+        {
+            _logger.LogInformation("Удаление сессии {SessionId}", id);
+
+            var session = await _sessions.GetByIdAsync(id);
+            if (session == null)
+            {
+                _logger.LogWarning("Сессия {SessionId} не найдена", id);
+                return Result.Fail("Сессия не найдена");
+            }
+
+            _sessions.Remove(session);
+            await _sessions.SaveChangesAsync();
+
+            _logger.LogInformation("Сессия {SessionId} успешно удалена", id);
             return Result.Ok();
         }
 
@@ -104,6 +130,7 @@ namespace Application.Services
             }
 
             session.IsActive = false;
+            session.ExpiresAt = DateTime.UtcNow;
             _sessions.Update(session);
             await _sessions.SaveChangesAsync();
 
@@ -125,6 +152,7 @@ namespace Application.Services
             foreach (var session in sessions)
             {
                 session.IsActive = false;
+                session.ExpiresAt = DateTime.UtcNow;
             }
 
             await _sessions.SaveChangesAsync();
@@ -137,7 +165,7 @@ namespace Application.Services
         {
             _logger.LogInformation("Запрос активных сессий пользователя {UserId}", userId);
 
-            var sessions = await _sessions.GetByUserAsync(userId);
+            var sessions = await _sessions.GetActiveByUserIdAsync(userId);
 
             if (sessions == null || !sessions.Any())
             {
@@ -149,6 +177,39 @@ namespace Application.Services
 
             _logger.LogInformation("Найдено {Count} активных сессий пользователя {UserId}", dtos.Count(), userId);
             return Result<IEnumerable<ReadAuthSessionDto>>.Ok(dtos);
+        }
+
+        public async Task<Result<ReadAuthSessionDto>> ReactivateSessionByMacAsync(string macAddress)
+        {
+            _logger.LogInformation("Попытка переактивации сессии по MAC-адресу: {MacAddress}", macAddress);
+
+            if (string.IsNullOrWhiteSpace(macAddress))
+            {
+                _logger.LogWarning("MAC-адрес не указан");
+                return Result<ReadAuthSessionDto>.Fail("MAC-адрес обязателен");
+            }
+
+            var existingSession = await _sessions.GetInactiveByMacAsync(macAddress);
+
+            if (existingSession == null)
+            {
+                _logger.LogWarning("Неактивная сессия с MAC-адресом {MacAddress} не найдена", macAddress);
+                return Result<ReadAuthSessionDto>.Fail("Неактивная сессия с таким MAC-адресом не найдена");
+            }
+
+            existingSession.IsActive = true;
+            existingSession.CreatedAt = DateTime.UtcNow;
+            existingSession.ExpiresAt = null;
+
+            _sessions.Update(existingSession);
+            await _sessions.SaveChangesAsync();
+
+            var dto = _mapper.Map<ReadAuthSessionDto>(existingSession);
+
+            _logger.LogInformation("Сессия с MAC-адресом {MacAddress} успешно переактивирована. Новая дата создания: {CreatedAt}",
+                macAddress, existingSession.CreatedAt);
+
+            return Result<ReadAuthSessionDto>.Ok(dto);
         }
     }
 }

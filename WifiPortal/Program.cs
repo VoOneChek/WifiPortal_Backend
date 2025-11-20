@@ -1,4 +1,5 @@
 using Application.Common.MappingProfile;
+using Application.Common.TelegramOptions;
 using Application.Interfaces.IRepositories;
 using Application.Interfaces.IServices;
 using Application.Services;
@@ -49,6 +50,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+builder.Services.Configure<TelegramOptions>(
+    builder.Configuration.GetSection("Telegram"));
+
 // Add services to the container.
 
 builder.Services.AddControllers();
@@ -65,6 +69,7 @@ builder.Services.AddScoped<IAuthMethodRepository, AuthMethodRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IOtpSenderService, OtpSenderService>();
 builder.Services.AddScoped<IAuthSessionService, AuthSessionService>();
 builder.Services.AddScoped<IAuthMethodService, AuthMethodService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -124,13 +129,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
-var telegramToken = builder.Configuration["Telegram:BotToken"];
-var tunnelUrl = "https://833o0l-95-26-99-46.ru.tuna.am";
-
-using var httpClient = new HttpClient();
-var setWebhookUrl = $"https://api.telegram.org/bot{telegramToken}/setWebhook?url={tunnelUrl}/api/telegram/webhook";
-var response = await httpClient.GetAsync(setWebhookUrl);
-var content = await response.Content.ReadAsStringAsync();
 
 app.Run();
