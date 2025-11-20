@@ -1,129 +1,132 @@
 ﻿using Application.Common.ResultInfo;
 using Application.DTOs.OtpCodeDto;
+using Application.DTOs.UserDto;
 using Application.Interfaces.IRepositories;
 using Application.Interfaces.IServices;
+using AutoMapper;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Application.Services
 {
     public class OtpService : IOtpService
     {
-        private readonly IDistributedCache _cache;
+        private readonly IMemoryCache _cache;
         private readonly ILogger<OtpService> _logger;
+        private readonly IUserRepository _user;
+        private readonly IJwtService _jwtService;
+        private readonly IMapper _mapper;
 
-        public OtpService(IDistributedCache cache, ILogger<OtpService> logger)
+        public OtpService(IMemoryCache cache, ILogger<OtpService> logger, IUserRepository user, IJwtService jwtService, IMapper mapper)
         {
             _cache = cache;
             _logger = logger;
+            _user = user;
+            _jwtService = jwtService;
+            _mapper = mapper;
         }
 
-        public async Task<Result> CreateAsync(CreateOtpCodeDto createOtpDto)
+        public async Task<Result<string>> CreateOtpCodeAsync(string phoneNumber)
         {
-            _logger.LogInformation("Создание OTP кода для номера {PhoneNumber}", createOtpDto.PhoneNumber);
+            _logger.LogInformation("Создание OTP кода для номера {PhoneNumber}", phoneNumber);
 
-            if (createOtpDto == null)
+            if (string.IsNullOrWhiteSpace(phoneNumber) ||
+                !Regex.IsMatch(phoneNumber, @"^\+7\d{10}$"))
             {
-                _logger.LogWarning("Переданный OTP код равен null");
-                return Result.Fail("OTP код не может быть null");
+                return Result<string>.Fail("Укажите корректный номер телефона в формате +7XXXXXXXXXX");
             }
 
-            if (string.IsNullOrWhiteSpace(createOtpDto.PhoneNumber))
+            if (await HasActiveOtpAsync(phoneNumber))
             {
-                _logger.LogWarning("Номер телефона не указан");
-                return Result.Fail("Номер телефона обязателен");
+                _logger.LogWarning("Для номера {PhoneNumber} уже есть активный OTP код", phoneNumber);
+                return Result<string>.Fail("Код уже отправлен. Попробуйте позже");
             }
 
             var code = GenerateRandomCode();
-            var cacheKey = $"otp:{createOtpDto.PhoneNumber}";
+            var cacheKey = $"otp:{phoneNumber}";
 
-            // Сохраняем в Redis с expiration (5 минут)
-            await _cache.SetStringAsync(cacheKey, code, new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            });
-
-            // TODO: Отправка SMS с кодом
-            _logger.LogInformation("OTP код для номера {PhoneNumber} создан и отправлен", createOtpDto.PhoneNumber);
-
-            return Result.Ok();
+            _cache.Set(cacheKey, code, TimeSpan.FromMinutes(5));
+            return Result<string>.Ok(code);
         }
 
-        public async Task<Result> VerifyOtpAsync(string phoneNumber, string code)
+        public async Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code)
         {
             _logger.LogInformation("Проверка OTP кода для номера {PhoneNumber}", phoneNumber);
 
             if (string.IsNullOrWhiteSpace(phoneNumber))
             {
                 _logger.LogWarning("Номер телефона не указан");
-                return Result.Fail("Номер телефона обязателен");
+                return Result<AuthResponseDto>.Fail("Номер телефона обязателен");
             }
 
             if (string.IsNullOrWhiteSpace(code))
             {
                 _logger.LogWarning("OTP код не указан");
-                return Result.Fail("OTP код обязателен");
+                return Result<AuthResponseDto>.Fail("OTP код обязателен");
             }
 
             var cacheKey = $"otp:{phoneNumber}";
-            var storedCode = await _cache.GetStringAsync(cacheKey);
-
-            if (storedCode == null)
+            if (!_cache.TryGetValue(cacheKey, out string? storedCode))
             {
-                _logger.LogWarning("OTP код для номера {PhoneNumber} не найден или истек", phoneNumber);
-                return Result.Fail("Код истек или не найден");
+                return Result<AuthResponseDto>.Fail("Код истек или не найден");
             }
 
             if (storedCode != code)
             {
                 _logger.LogWarning("Неверный OTP код для номера {PhoneNumber}", phoneNumber);
-                return Result.Fail("Неверный код");
+                return Result<AuthResponseDto>.Fail("Неверный код");
             }
 
-            await _cache.RemoveAsync(cacheKey);
+            _cache.Remove(cacheKey);
+
+            var user = await _user.GetByPhoneAsync(phoneNumber);
+            
+            if (user == null)
+            {
+                user = new User
+                {
+                    PhoneNumber = phoneNumber,
+                    Role = UserRole.Guest
+                };
+
+                await _user.AddAsync(user);
+                await _user.SaveChangesAsync();
+            }
+
+            var token = _jwtService.GenerateToken(user);
 
             _logger.LogInformation("OTP код для номера {PhoneNumber} успешно проверен", phoneNumber);
-            return Result.Ok();
+            return Result<AuthResponseDto>.Ok(new AuthResponseDto
+            {
+                Token = token,
+                User = _mapper.Map<ReadUserDto>(user)
+            });
         }
 
-        public async Task<Result> ResendOtpAsync(string phoneNumber)
-        {
-            _logger.LogInformation("Повторная отправка OTP для номера {PhoneNumber}", phoneNumber);
-
-            var cacheKey = $"otp:{phoneNumber}";
-            await _cache.RemoveAsync(cacheKey);
-
-            return await CreateAsync(new CreateOtpCodeDto { PhoneNumber = phoneNumber });
-        }
-
-        public async Task<Result> InvalidateOtpAsync(string phoneNumber)
+        public Task<Result> InvalidateOtpAsync(string phoneNumber)
         {
             _logger.LogInformation("Инвалидация OTP кода для номера {PhoneNumber}", phoneNumber);
 
             var cacheKey = $"otp:{phoneNumber}";
-            await _cache.RemoveAsync(cacheKey);
+            _cache.Remove(cacheKey);
 
             _logger.LogInformation("OTP код для номера {PhoneNumber} инвалидирован", phoneNumber);
-            return Result.Ok();
+            return Task.FromResult(Result.Ok());
         }
 
-        public async Task<Result<OtpStatusDto>> GetOtpStatusAsync(string phoneNumber)
+        public Task<bool> HasActiveOtpAsync(string phoneNumber)
         {
             var cacheKey = $"otp:{phoneNumber}";
-            var exists = await _cache.GetStringAsync(cacheKey) != null;
-
-            return Result<OtpStatusDto>.Ok(new OtpStatusDto
-            {
-                PhoneNumber = phoneNumber,
-                HasActiveOtp = exists,
-                Message = exists ? "Активный OTP код существует" : "Активный OTP код отсутствует"
-            });
+            return Task.FromResult(_cache.TryGetValue(cacheKey, out _));
         }
 
         private static string GenerateRandomCode()

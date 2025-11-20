@@ -1,12 +1,14 @@
 ﻿using Application.DTOs.AuthSessionDto;
 using Application.Interfaces.IServices;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class SessionController : ControllerBase
 {
     private readonly IAuthSessionService _sessions;
@@ -17,6 +19,7 @@ public class SessionController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var result = await _sessions.GetAllAsync();
@@ -24,6 +27,7 @@ public class SessionController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _sessions.GetByIdAsync(id);
@@ -34,6 +38,13 @@ public class SessionController : ControllerBase
     public async Task<IActionResult> Create(CreateAuthSessionDto createSessionDto)
     {
         var result = await _sessions.CreateAsync(createSessionDto);
+        return result.Success ? Ok() : BadRequest(result.Error);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var result = await _sessions.DeleteSessionAsync(id);
         return result.Success ? Ok() : BadRequest(result.Error);
     }
 
@@ -55,6 +66,13 @@ public class SessionController : ControllerBase
     public async Task<IActionResult> GetActiveSessionsByUserId(int userId)
     {
         var result = await _sessions.GetActiveSessionsByUserIdAsync(userId);
+        return result.Success ? Ok(result.Data) : BadRequest(result.Error);
+    }
+
+    [HttpPatch("reactivate/{macAddress}")]
+    public async Task<IActionResult> ReactivateByMac(string macAddress)
+    {
+        var result = await _sessions.ReactivateSessionByMacAsync(macAddress);
         return result.Success ? Ok(result.Data) : BadRequest(result.Error);
     }
 }

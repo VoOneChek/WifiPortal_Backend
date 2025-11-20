@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WifiPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class LogsController : ControllerBase
 {
     private readonly IWebHostEnvironment _environment;
@@ -25,9 +27,7 @@ public class LogsController : ControllerBase
             var logsDirectory = Path.Combine(_environment.ContentRootPath, "Logs");
 
             if (!Directory.Exists(logsDirectory))
-            {
                 return NotFound("Директория с логами не найдена");
-            }
 
             string logFilePath;
             if (string.IsNullOrEmpty(date))
@@ -46,8 +46,13 @@ public class LogsController : ControllerBase
                     return NotFound($"Лог-файл за дату {date} не найден");
             }
 
-            var fileName = Path.GetFileName(logFilePath);
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(logFilePath);
+            var tempFile = Path.GetTempFileName();
+            System.IO.File.Copy(logFilePath, tempFile, overwrite: true);
+
+            var fileName = Path.GetFileName(tempFile);
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(tempFile);
+
+            System.IO.File.Delete(tempFile);
 
             _logger.LogInformation("Логи успешно получены из файла {FilePath}", logFilePath);
 

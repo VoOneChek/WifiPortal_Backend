@@ -12,6 +12,7 @@ namespace Application.DTOs.UserDto
     {
         public required string PhoneNumber { get; set; }
         public string? SocialId { get; set; }
+        public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
         public UserRole Role { get; set; } = UserRole.Guest;
@@ -22,6 +23,7 @@ namespace Application.DTOs.UserDto
         public int Id { get; set; }
         public required string PhoneNumber { get; set; }
         public string? SocialId { get; set; }
+        public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
         public UserRole Role { get; set; }
@@ -32,6 +34,7 @@ namespace Application.DTOs.UserDto
     {
         public string? PhoneNumber { get; set; }
         public string? SocialId { get; set; }
+        public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
         public UserRole? Role { get; set; }
@@ -42,6 +45,7 @@ namespace Application.DTOs.UserDto
         public int Id { get; set; }
         public required string PhoneNumber { get; set; }
         public string? SocialId { get; set; }
+        public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
         public UserRole Role { get; set; }
