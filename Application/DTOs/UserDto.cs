@@ -32,12 +32,17 @@ namespace Application.DTOs.UserDto
 
     public class UpdateUserDto
     {
-        public string? PhoneNumber { get; set; }
         public string? SocialId { get; set; }
         public long? TelegramChatId { get; set; }
         public string? RadiusLogin { get; set; }
         public string? FullName { get; set; }
         public UserRole? Role { get; set; }
+    }
+
+    public class UpdatePhoneNumberDto
+    {
+        public string? PhoneNumber { get; set; }
+        public string? OtpCode { get; set; }
     }
 
     public class UserDetailDto

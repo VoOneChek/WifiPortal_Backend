@@ -161,6 +161,24 @@ namespace Application.Services
             return Result.Ok();
         }
 
+        public async Task<Result<IEnumerable<ReadAuthSessionDto>>> GetSessionsByUserIdAsync(int userId)
+        {
+            _logger.LogInformation("Сессии пользователя {UserId}", userId);
+
+            var sessions = await _sessions.GetByUserAsync(userId);
+
+            if (sessions == null || !sessions.Any())
+            {
+                _logger.LogWarning("Сессии пользователя {UserId} не найдены", userId);
+                return Result<IEnumerable<ReadAuthSessionDto>>.Fail("Сессии не найдены");
+            }
+
+            var dtos = _mapper.Map<IEnumerable<ReadAuthSessionDto>>(sessions);
+
+            _logger.LogInformation("Найдено {Count} сессий пользователя {UserId}", dtos.Count(), userId);
+            return Result<IEnumerable<ReadAuthSessionDto>>.Ok(dtos);
+        }
+
         public async Task<Result<IEnumerable<ReadAuthSessionDto>>> GetActiveSessionsByUserIdAsync(int userId)
         {
             _logger.LogInformation("Запрос активных сессий пользователя {UserId}", userId);

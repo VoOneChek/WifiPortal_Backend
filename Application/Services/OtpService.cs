@@ -60,31 +60,10 @@ namespace Application.Services
 
         public async Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code)
         {
-            _logger.LogInformation("Проверка OTP кода для номера {PhoneNumber}", phoneNumber);
+            var cacheKey = ValidateVerifyData(phoneNumber, code);
 
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                _logger.LogWarning("Номер телефона не указан");
-                return Result<AuthResponseDto>.Fail("Номер телефона обязателен");
-            }
-
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                _logger.LogWarning("OTP код не указан");
-                return Result<AuthResponseDto>.Fail("OTP код обязателен");
-            }
-
-            var cacheKey = $"otp:{phoneNumber}";
-            if (!_cache.TryGetValue(cacheKey, out string? storedCode))
-            {
-                return Result<AuthResponseDto>.Fail("Код истек или не найден");
-            }
-
-            if (storedCode != code)
-            {
-                _logger.LogWarning("Неверный OTP код для номера {PhoneNumber}", phoneNumber);
-                return Result<AuthResponseDto>.Fail("Неверный код");
-            }
+            if (cacheKey != $"otp:{phoneNumber}")
+                return Result<AuthResponseDto>.Fail(cacheKey);
 
             _cache.Remove(cacheKey);
 
@@ -112,6 +91,19 @@ namespace Application.Services
             });
         }
 
+        public Task<Result> VerifyPhoneUpdateOtpAsync(string phoneNumber, string code)
+        {
+            var cacheKey = ValidateVerifyData(phoneNumber, code);
+
+            if (cacheKey != $"otp:{phoneNumber}")
+                return Task.FromResult(Result.Fail(cacheKey));
+
+            _cache.Remove(cacheKey);
+
+            _logger.LogInformation("OTP код для обновления номера {PhoneNumber} успешно проверен", phoneNumber);
+            return Task.FromResult(Result.Ok());
+        }
+
         public Task<Result> InvalidateOtpAsync(string phoneNumber)
         {
             _logger.LogInformation("Инвалидация OTP кода для номера {PhoneNumber}", phoneNumber);
@@ -133,6 +125,36 @@ namespace Application.Services
         {
             var random = new Random();
             return random.Next(100000, 999999).ToString();
+        }
+
+        private string ValidateVerifyData (string phoneNumber, string code)
+        {
+            _logger.LogInformation("Проверка OTP кода для номера {PhoneNumber}", phoneNumber);
+
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                _logger.LogWarning("Номер телефона не указан");
+                return "Номер телефона обязателен";
+            }
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _logger.LogWarning("OTP код не указан");
+                return "OTP код обязателен";
+            }
+
+            var cacheKey = $"otp:{phoneNumber}";
+            if (!_cache.TryGetValue(cacheKey, out string? storedCode))
+            {
+                return "Код истек или не найден";
+            }
+
+            if (storedCode != code)
+            {
+                _logger.LogWarning("Неверный OTP код для номера {PhoneNumber}", phoneNumber);
+                return "Неверный код";
+            }
+            return cacheKey;
         }
     }
 }
