@@ -62,6 +62,13 @@ public class SessionController : ControllerBase
         return result.Success ? Ok() : BadRequest(result.Error);
     }
 
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetSessionsByUserId(int userId)
+    {
+        var result = await _sessions.GetSessionsByUserIdAsync(userId);
+        return result.Success ? Ok(result.Data) : BadRequest(result.Error);
+    }
+
     [HttpGet("user/{userId}/active")]
     public async Task<IActionResult> GetActiveSessionsByUserId(int userId)
     {

@@ -16,6 +16,7 @@ namespace Application.Interfaces.IServices
         Task<Result<ReadUserDto>> GetByPhoneAsync(string phone);
         Task<Result> CreateAsync(CreateUserDto createUserDto);
         Task<Result> UpdateAsync(int id, UpdateUserDto updateUserDto);
+        Task<Result> UpdatePhoneNumberAsync(int id, UpdatePhoneNumberDto updatePhoneNumberDto);
         Task<Result> DeleteAsync(int id);
         Task<Result<UserDetailDto>> GetUserWithSessionsAsync(int id);
         Task<Result> LinkTelegramAsync(string phoneNumber, long chatId, string? username);

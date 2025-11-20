@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Application.Services
@@ -20,13 +21,15 @@ namespace Application.Services
         private readonly IAuthSessionRepository _sessions;
         private readonly ILogger<UserService> _logger;
         private readonly IMapper _mapper;
+        private readonly IOtpService _otpService;
 
-        public UserService(IUserRepository users, IAuthSessionRepository sessions, ILogger<UserService> logger, IMapper mapper)
+        public UserService(IUserRepository users, IAuthSessionRepository sessions, ILogger<UserService> logger, IMapper mapper, IOtpService otpService)
         {
             _users = users;
             _sessions = sessions;
             _logger = logger;
             _mapper = mapper;
+            _otpService = otpService;
         }
 
         public async Task<Result<IEnumerable<ReadUserDto>>> GetAllAsync()
@@ -137,21 +140,66 @@ namespace Application.Services
                 return Result.Fail("Пользователь не найден");
             }
 
-            if (!string.IsNullOrWhiteSpace(updateUserDto.PhoneNumber) && updateUserDto.PhoneNumber != user.PhoneNumber)
-            {
-                var existingUser = await _users.GetByPhoneAsync(updateUserDto.PhoneNumber);
-                if (existingUser != null)
-                {
-                    _logger.LogWarning("Пользователь с номером телефона {PhoneNumber} уже существует", updateUserDto.PhoneNumber);
-                    return Result.Fail("Пользователь с таким номером телефона уже существует");
-                }
-            }
-
             _mapper.Map(updateUserDto, user);
             _users.Update(user);
             await _users.SaveChangesAsync();
 
             _logger.LogInformation("Пользователь с ID {Id} успешно обновлен", id);
+            return Result.Ok();
+        }
+
+        public async Task<Result> UpdatePhoneNumberAsync(int id, UpdatePhoneNumberDto updatePhoneNumberDto)
+        {
+            _logger.LogInformation("Обновление номера телефона для пользователя с ID {Id}", id);
+
+            if (updatePhoneNumberDto == null)
+            {
+                _logger.LogWarning("Переданные данные для обновления номера телефона равны null");
+                return Result.Fail("Данные для обновления номера телефона не могут быть null");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatePhoneNumberDto.PhoneNumber) ||
+                !Regex.IsMatch(updatePhoneNumberDto.PhoneNumber, @"^\+7\d{10}$"))
+            {
+                return Result.Fail("Укажите корректный номер телефона в формате +7XXXXXXXXXX");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatePhoneNumberDto.OtpCode))
+            {
+                _logger.LogWarning("Код подтверждения не указан");
+                return Result.Fail("Код подтверждения обязателен для изменения номера телефона");
+            }
+
+            var user = await _users.GetByIdAsync(id);
+            if (user == null)
+            {
+                _logger.LogWarning("Пользователь с ID {Id} не найден", id);
+                return Result.Fail("Пользователь не найден");
+            }
+
+            var existingUser = await _users.GetByPhoneAsync(updatePhoneNumberDto.PhoneNumber);
+            if (existingUser != null && existingUser.Id != id)
+            {
+                _logger.LogWarning("Номер телефона {PhoneNumber} уже используется другим пользователем", updatePhoneNumberDto.PhoneNumber);
+                return Result.Fail("Этот номер телефона уже используется другим пользователем");
+            }
+
+            var otpVerificationResult = await _otpService.VerifyPhoneUpdateOtpAsync(updatePhoneNumberDto.PhoneNumber, updatePhoneNumberDto.OtpCode);
+            if (!otpVerificationResult.Success)
+            {
+                _logger.LogWarning(otpVerificationResult.Error);
+                return Result.Fail(otpVerificationResult.Error!);
+            }
+
+            var oldPhoneNumber = user.PhoneNumber;
+            user.PhoneNumber = updatePhoneNumberDto.PhoneNumber;
+
+            _users.Update(user);
+            await _users.SaveChangesAsync();
+
+            _logger.LogInformation("Номер телефона пользователя с ID {Id} успешно изменен с {OldPhone} на {NewPhone}",
+                id, oldPhoneNumber, user.PhoneNumber);
+
             return Result.Ok();
         }
 

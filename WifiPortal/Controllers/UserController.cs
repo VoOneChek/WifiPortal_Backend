@@ -64,6 +64,13 @@ public class UserController : ControllerBase
         return result.Success ? Ok() : BadRequest(result.Error);
     }
 
+    [HttpPut("{id}/update-phone")]
+    public async Task<IActionResult> UpdatePhoneNumber(int id, UpdatePhoneNumberDto updatePhoneNumberDto)
+    {
+        var result = await _users.UpdatePhoneNumberAsync(id, updatePhoneNumberDto);
+        return result.Success ? Ok() : BadRequest(result.Error);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

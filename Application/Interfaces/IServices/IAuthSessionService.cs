@@ -17,6 +17,7 @@ namespace Application.Interfaces.IServices
         Task<Result> DeleteSessionAsync(int id);
         Task<Result> DeactivateAsync(int id);
         Task<Result> DeactivateAllUserSessionsAsync(int userId);
+        Task<Result<IEnumerable<ReadAuthSessionDto>>> GetSessionsByUserIdAsync(int userId);
         Task<Result<IEnumerable<ReadAuthSessionDto>>> GetActiveSessionsByUserIdAsync(int userId);
         Task<Result<ReadAuthSessionDto>> ReactivateSessionByMacAsync(string macAddress);
     }

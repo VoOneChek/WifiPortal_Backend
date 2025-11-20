@@ -13,6 +13,7 @@ namespace Application.Interfaces.IServices
     {
         Task<Result<string>> CreateOtpCodeAsync(string phoneNumber);
         Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code);
+        Task<Result> VerifyPhoneUpdateOtpAsync(string phoneNumber, string code);
         Task<Result> InvalidateOtpAsync(string phoneNumber);
         Task<bool> HasActiveOtpAsync(string phoneNumber);
     }
