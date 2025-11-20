@@ -11,15 +11,22 @@ namespace Infrastructure.ExternalServices
 {
     public class SmscService : ISmsService
     {
-        private readonly string _login = "free";
-        private readonly string _password = "free";
+        private readonly string _login;
+        private readonly string _password;
         private readonly HttpClient _httpClient;
         private readonly ILogger<SmscService> _logger;
+        private const string SenderName = "WIFI-PORTAL";
 
         public SmscService(HttpClient httpClient, ILogger<SmscService> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
+
+            _login = Environment.GetEnvironmentVariable("SMS_LOGIN")
+                     ?? throw new Exception("Переменная окружения SMS_LOGIN не установлена");
+
+            _password = Environment.GetEnvironmentVariable("SMS_PASSWORD")
+                        ?? throw new Exception("Переменная окружения SMS_PASSWORD не установлена");
         }
 
         public async Task<Result> SendSmsAsync(string phoneNumber, string message)
@@ -28,12 +35,17 @@ namespace Infrastructure.ExternalServices
             {
                 var cleanPhone = phoneNumber.Replace("+", "").Replace(" ", "");
 
-                var url = $"https://smsc.ru/sys/send.php?login={_login}&psw={_password}" +
-                         $"&phones={cleanPhone}&mes={Uri.EscapeDataString(message)}&fmt=3&charset=utf-8";
+                var finalMessage = $"Ваш код: {message}. Никому не сообщайте его. {SenderName}";
+
+                var url =
+                    $"https://smsc.ru/sys/send.php?" +
+                    $"login={_login}&psw={_password}" +
+                    $"&phones={cleanPhone}" +
+                    $"&sender={SenderName}" +
+                    $"&mes={Uri.EscapeDataString(finalMessage)}" +
+                    $"&fmt=3&charset=utf-8";
 
                 var response = await _httpClient.GetAsync(url);
-
-                // Принудительно указываем кодировку UTF-8
                 var content = await response.Content.ReadAsStringAsync();
 
                 _logger.LogInformation("Ответ от SMSC: {Response}", content);
@@ -54,4 +66,5 @@ namespace Infrastructure.ExternalServices
             }
         }
     }
+
 }

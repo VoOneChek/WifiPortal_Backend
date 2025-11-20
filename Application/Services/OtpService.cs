@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Application.Services
@@ -24,27 +25,25 @@ namespace Application.Services
         private readonly IUserRepository _user;
         private readonly IJwtService _jwtService;
         private readonly IMapper _mapper;
-        private readonly ISmsService _smsService;
-        private readonly ITelegramService _telegramService;
 
-        public OtpService(IMemoryCache cache, ILogger<OtpService> logger, IUserRepository user, IJwtService jwtService, IMapper mapper, 
-            ISmsService smsService, ITelegramService telegramService)
+        public OtpService(IMemoryCache cache, ILogger<OtpService> logger, IUserRepository user, IJwtService jwtService, IMapper mapper)
         {
             _cache = cache;
             _logger = logger;
             _user = user;
             _jwtService = jwtService;
             _mapper = mapper;
-            _smsService = smsService;
-            _telegramService = telegramService;
         }
 
-        private async Task<Result<string>> CreateOtpCodeAsync(string phoneNumber)
+        public async Task<Result<string>> CreateOtpCodeAsync(string phoneNumber)
         {
             _logger.LogInformation("Создание OTP кода для номера {PhoneNumber}", phoneNumber);
 
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-                return Result<string>.Fail("Номер телефона обязателен");
+            if (string.IsNullOrWhiteSpace(phoneNumber) ||
+                !Regex.IsMatch(phoneNumber, @"^\+7\d{10}$"))
+            {
+                return Result<string>.Fail("Укажите корректный номер телефона в формате +7XXXXXXXXXX");
+            }
 
             if (await HasActiveOtpAsync(phoneNumber))
             {
@@ -57,40 +56,6 @@ namespace Application.Services
 
             _cache.Set(cacheKey, code, TimeSpan.FromMinutes(5));
             return Result<string>.Ok(code);
-        }
-
-        public async Task<Result> CreateAndSendSmsAsync(string phoneNumber)
-        {
-            var codeResult = await CreateOtpCodeAsync(phoneNumber);
-            if (!codeResult.Success)
-                return Result.Fail(codeResult.Error!);
-
-            var smsResult = await _smsService.SendSmsAsync(phoneNumber, $"Ваш код: {codeResult.Data}");
-            if (!smsResult.Success)
-            {
-                _cache.Remove($"otp:{phoneNumber}");
-                return Result.Fail(smsResult.Error ?? "Ошибка отправки SMS");
-            }
-
-            _logger.LogInformation("SMS с кодом отправлено на {PhoneNumber}", phoneNumber);
-            return Result.Ok();
-        }
-
-        public async Task<Result> CreateAndSendTelegramAsync(string phoneNumber)
-        {
-            var codeResult = await CreateOtpCodeAsync(phoneNumber);
-            if (!codeResult.Success)
-                return Result.Fail(codeResult.Error!);
-
-            var telegramResult = await _telegramService.SendTelegramAsync(phoneNumber, codeResult.Data!);
-            if (!telegramResult.Success)
-            {
-                _cache.Remove($"otp:{phoneNumber}");
-                return Result.Fail(telegramResult.Error ?? "Ошибка отправки Telegram");
-            }
-
-            _logger.LogInformation("Код отправлен в Telegram для {PhoneNumber}", phoneNumber);
-            return Result.Ok();
         }
 
         public async Task<Result<AuthResponseDto>> VerifyOtpAsync(string phoneNumber, string code)
@@ -145,25 +110,6 @@ namespace Application.Services
                 Token = token,
                 User = _mapper.Map<ReadUserDto>(user)
             });
-        }
-
-        public Task<Result> ResendOtpAsync(string phoneNumber)
-        {
-            _logger.LogInformation("Повторная отправка OTP для номера {PhoneNumber}", phoneNumber);
-
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                _logger.LogWarning("Номер телефона не указан");
-                return Task.FromResult(Result.Fail("Номер телефона обязателен"));
-            }
-
-            var code = GenerateRandomCode();
-            var cacheKey = $"otp:{phoneNumber}";
-
-            _cache.Set(cacheKey, code, TimeSpan.FromMinutes(5));
-
-            _logger.LogInformation("Новый OTP код для номера {PhoneNumber} создан", phoneNumber);
-            return Task.FromResult(Result.Ok());
         }
 
         public Task<Result> InvalidateOtpAsync(string phoneNumber)

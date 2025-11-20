@@ -9,7 +9,9 @@ namespace Application.Interfaces.IRepositories
 {
     public interface IAuthSessionRepository : IRepository<AuthSession>
     {
-        Task<AuthSession?> GetActiveByMacAsync(string macAddress);
+        Task<AuthSession?> GetInactiveByMacAsync(string macAddress);
         Task<IEnumerable<AuthSession>> GetByUserAsync(int userId);
+        Task<IEnumerable<AuthSession>> GetActiveByUserIdAsync(int userId);
+        Task<bool> IsMacAddressExistsAsync(string macAddress);
     }
 }

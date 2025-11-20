@@ -6,7 +6,10 @@
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "JWT_SECRET_KEY": "viPzKiSOMouxZNxIIHoRqvN23jBt3Uzo"
+        "JWT_SECRET_KEY": "viPzKiSOMouxZNxIIHoRqvN23jBt3Uzo",
+        "Telegram:BotToken": "8526951349:AAHZxo2YNKak-KM82GLeiO1FFEJDptnGHcY",
+        "SMS_LOGIN": "hujolyter@mail.ru",
+        "SMS_PASSWORD": "5HU-wk2-L6k-qkx"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5082"
